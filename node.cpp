@@ -47,7 +47,7 @@ void setup(){
     RGB.control(true);
     RGB.brightness(100);
     RGB.color(10, 100, 255);
-    pinMode(D2, OUTPUT);
+    pinMode(D0, OUTPUT);
     connect_wifi();
     udp.begin(port);
     udp.joinMulticast(multicast);
@@ -94,14 +94,19 @@ void check_packet(){
         char data[256];
         udp.read(data, size);
         String s = String(data);
-        int end = s.indexOf("|", 1);
-        String cmd = s.substring(1, end);
+        int end = s.indexOf("\n", 0);
+        String cmd = s.substring(0, end);
         Serial.println(cmd);
         if(cmd == String("ack:true:"+myIDStr)){
             ackd = true;
         }
         if(cmd == String("light:on:"+myIDStr)){
+            digitalWrite(D0, HIGH);
             Serial.println("Light ON!");
+        }
+        if(cmd == String("light:off:"+myIDStr)){
+            digitalWrite(D0, LOW);
+            Serial.println("Light OFF!");
         }
     }
 }
