@@ -70,22 +70,26 @@ void ack(){
     Serial.print("Sent: "); Serial.println(sent);
 }
 
+void send_packet(char* packet){
+    unsigned char body_out[256];
+    aes_128_encrypt(packet, KEY, body_out);
+    Serial.print("Sending: ");
+    Serial.print(packet);
+    udp.beginPacket(multicast, port);
+    int bytes = udp.write(body_out, 256);
+    udp.endPacket();
+    Serial.print("Sent: ");
+    Serial.println(bytes);
+}
+
 unsigned int next = 0;
 
 void send_stats(){
     if(millis() < next) return;
     next = millis()+1000;
     char json_body[256];
-    unsigned char body_out[256];
     sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.2f ,\"ec\":%d,\"do\":%d}}",id,25.09,43.98,6.73,99,25);
-    aes_128_encrypt(json_body, KEY, body_out);
-    Serial.print("Sending: ");
-    Serial.print(json_body);
-    udp.beginPacket(multicast, port);
-    int bytes = udp.write(body_out, 256);
-    udp.endPacket();
-    Serial.print("Sent: ");
-    Serial.println(bytes);
+    send_packet(json_body);
 }
 
 void check_packet(){
@@ -103,10 +107,16 @@ void check_packet(){
         if(cmd == String("light:on:"+myIDStr)){
             digitalWrite(D0, HIGH);
             Serial.println("Light ON!");
+            char json_body[256];
+            sprintf(json_body, "{\"type\":\"lighton\",\"id\":\"%s\"}",id);
+            send_packet(json_body);
         }
         if(cmd == String("light:off:"+myIDStr)){
             digitalWrite(D0, LOW);
             Serial.println("Light OFF!");
+            char json_body[256];
+            sprintf(json_body, "{\"type\":\"lightoff\",\"id\":\"%s\"}",id);
+            send_packet(json_body);
         }
     }
 }
