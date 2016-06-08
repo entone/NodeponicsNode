@@ -5,6 +5,7 @@
 #include "libraries/CO2Monitor/CO2Monitor.h"
 #include "libraries/HttpClient/HttpClient.h"
 #include "libraries/DustSensor/DustSensor.h"
+#include "libraries/PH/PH.h"
 #include "key.h"
 SYSTEM_MODE(MANUAL);
 
@@ -13,6 +14,9 @@ unsigned int port = 5683;
 IPAddress multicast(239,255,41,11);
 IPAddress bad_ip(0,0,0,0);
 IPAddress candc;
+
+PH ph;
+AnalogSensor water_temp(A0);
 
 String myIDStr = Particle.deviceID();
 char id[36];
@@ -52,6 +56,8 @@ void setup(){
     udp.begin(port);
     udp.joinMulticast(multicast);
     myIDStr.toCharArray(id, 36);
+    ph.init();
+    water_temp.init();
     ackd = millis();
     Serial.println("running");
 }
@@ -83,7 +89,15 @@ void send_stats(){
     if(millis() < next) return;
     next = millis()+1000;
     char json_body[256];
-    sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.2f ,\"ec\":%d,\"do\":%d}}",id,25.09,43.98,6.73,99,25);
+    int adc = water_temp.read();
+    Serial.println(adc);
+    float voltage = adc * 3.3;
+    voltage /= 4096.0;
+    float wt = (voltage-0.5)*100;
+    float p = ph.read();
+    Serial.println(wt);
+    Serial.println(p);
+    sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.2f ,\"ec\":%d,\"do\":%d}}",id,wt,0.00,p,0,0);
     send_packet(json_body);
 }
 
