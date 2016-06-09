@@ -17,6 +17,7 @@ IPAddress candc;
 
 PH ph;
 AnalogSensor water_temp(A0);
+DHT dht(D4, DHT22);
 
 String myIDStr = Particle.deviceID();
 char id[36];
@@ -58,6 +59,7 @@ void setup(){
     myIDStr.toCharArray(id, 36);
     ph.init();
     water_temp.init();
+    dht.begin();
     ackd = millis();
     Serial.println("running");
 }
@@ -95,9 +97,11 @@ void send_stats(){
     voltage /= 4096.0;
     float wt = (voltage-0.5)*100;
     float p = ph.read();
+    float t = dht.readTemperature(false);
+    float h = dht.readHumidity();
     Serial.println(wt);
     Serial.println(p);
-    sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.2f ,\"ec\":%d,\"do\":%d}}",id,wt,0.00,p,0,0);
+    sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.2f ,\"ec\":%d,\"do\":%d}}",id,t,h,p,0,0);
     send_packet(json_body);
 }
 
