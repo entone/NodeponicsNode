@@ -5,7 +5,7 @@
 #include "libraries/CO2Monitor/CO2Monitor.h"
 #include "libraries/HttpClient/HttpClient.h"
 #include "libraries/DustSensor/DustSensor.h"
-#include "libraries/PH/PH.h"
+#include "libraries/AtlasScientific/AtlasScientific.h"
 #include "key.h"
 SYSTEM_MODE(MANUAL);
 
@@ -15,7 +15,7 @@ IPAddress multicast(239,255,41,11);
 IPAddress bad_ip(0,0,0,0);
 IPAddress candc;
 
-PH ph;
+AtlasScientific atlas = AtlasScientific(true, true, false, false);
 AnalogSensor water_temp(A0);
 DHT dht(D4, DHT22);
 
@@ -57,7 +57,7 @@ void setup(){
     udp.begin(port);
     udp.joinMulticast(multicast);
     myIDStr.toCharArray(id, 36);
-    ph.init();
+    atlas.init();
     water_temp.init();
     dht.begin();
     ackd = millis();
@@ -88,20 +88,19 @@ void check_ack(){
 unsigned int next = 0;
 
 void send_stats(){
+    atlas.data_available();
     if(millis() < next) return;
     next = millis()+1000;
     char json_body[256];
     int adc = water_temp.read();
-    Serial.println(adc);
     float voltage = adc * 3.3;
     voltage /= 4096.0;
     float wt = (voltage-0.5)*100;
-    float p = ph.read();
+    float p = atlas.read(PH_CHANNEL);
+    float d = atlas.read(DO_CHANNEL);
     float t = dht.readTemperature(false);
     float h = dht.readHumidity();
-    Serial.println(wt);
-    Serial.println(p);
-    sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.2f ,\"ec\":%d,\"do\":%d}}",id,t,h,p,0,0);
+    sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.3f,\"do\":%.3f}}",id,t,h,p,d);
     send_packet(json_body);
 }
 
