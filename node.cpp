@@ -5,6 +5,7 @@
 #include "libraries/CO2Monitor/CO2Monitor.h"
 #include "libraries/HttpClient/HttpClient.h"
 #include "libraries/DustSensor/DustSensor.h"
+#include "libraries/PR103J2/PR103J2.h"
 #include "libraries/AtlasScientific/AtlasScientific.h"
 #include "key.h"
 SYSTEM_MODE(MANUAL);
@@ -16,7 +17,7 @@ IPAddress bad_ip(0,0,0,0);
 IPAddress candc;
 
 AtlasScientific atlas = AtlasScientific(true, true, false, false);
-AnalogSensor water_temp(A0);
+PR103J2 water_temp(A0);
 DHT dht(D4, DHT22);
 
 String myIDStr = Particle.deviceID();
@@ -89,18 +90,15 @@ unsigned int next = 0;
 
 void send_stats(){
     atlas.data_available();
+    float wt = water_temp.read();
     if(millis() < next) return;
     next = millis()+1000;
     char json_body[256];
-    int adc = water_temp.read();
-    float voltage = adc * 3.3;
-    voltage /= 4096.0;
-    float wt = (voltage-0.5)*100;
     float p = atlas.read(PH_CHANNEL);
     float d = atlas.read(DO_CHANNEL);
     float t = dht.readTemperature(false);
     float h = dht.readHumidity();
-    sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.3f,\"do\":%.3f}}",id,t,h,p,d);
+    sprintf(json_body, "{\"type\":\"stats\",\"id\":\"%s\",\"data\":{\"water_temperature\":%.4f,\"temperature\":%.2f,\"humidity\":%.2f,\"ph\":%.3f,\"do\":%.3f}}",id,wt,t,h,p,d);
     send_packet(json_body);
 }
 
